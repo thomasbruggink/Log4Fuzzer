@@ -1,0 +1,61 @@
+version: "3.2"
+services:
+  Zookeeper:
+    build:
+      context: Zookeeper/
+    image: local-zookeeper
+    networks:
+      local-kafka:
+        ipv4_address: 172.24.0.10
+    ports:
+      - 2181:2181
+    environment:
+      - MYID=1
+      - SERVERS=0.0.0.0
+#    volumes:
+#      - ./Logs/Zookeeper:/opt/logs
+#      - ./Data/Zookeeper/data:/data/zookeeper
+
+  Kafka:
+    depends_on:
+      - Zookeeper
+    build:
+      context: Kafka/
+    image: local-kafka
+    ports:
+      - 9092:9092
+    environment:
+      - BROKERID=0
+      - ZOOKEEPER=Zookeeper
+      - ADVERTISEADDRESS=${HOST_IP}:9092
+      - BROKERADVERTISEADDRESS=172.24.0.11
+      - HOSTPORT=9092
+      - REPLICATIONFACTOR=1
+      - MININSYNCREPLICACOUNT=1
+    networks:
+      local-kafka:
+        ipv4_address: 172.24.0.11
+#    volumes:
+#      - ./Logs/Kafka:/opt/logs
+
+  KafkaInit:
+    depends_on:
+      - Kafka
+    build:
+      context: KafkaInit/
+    image: local-kafkainit
+    environment:
+      - KafkaIp=Kafka:9092
+      - ReplicationFactor=1
+      - Topics=requests
+    networks:
+      local-kafka:
+        ipv4_address: 172.24.0.60
+
+networks:
+  local-kafka:
+    name: local-kafka
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.24.0.0/16
