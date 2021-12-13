@@ -1,6 +1,7 @@
 from kafka import KafkaConsumer, KafkaProducer
 import json
 import base64
+import urllib.parse
 from Event import Event
 
 consumer = KafkaConsumer('requests', group_id='fuzzer', bootstrap_servers="localhost:9092")
@@ -16,6 +17,7 @@ for msg in consumer:
     path = event.Path
     userAgent = event.findHeader("User-Agent")
     injectVal = inject.replace("<host>", host)
+    escapedInjectVal = urllib.parse.quote_plus(injectVal)
     # Try user agent
     if userAgent != None:
         copy = event.copy()
@@ -23,6 +25,17 @@ for msg in consumer:
         print("Sending user agent")
         copy.Meta["Mutation"] = "user-agent"
         producer.send(topic, value=json.dumps(copy.toDict()))
+    # Try authorization
+    auth = event.findHeader("Authorization")
+    if auth != None:
+        copy = event.copy()
+        if "Bearer" in auth or "bearer" in auth:
+            copy.setHeader("Authorization", auth.split(" ")[0] + " " + injectVal)
+        else:
+            copy.setHeader("Authorization", injectVal)
+        print("Sending authorization")
+        copy.Meta["Mutation"] = "authorization"
+        producer.send(topic, value=json.dumps(copy.toDict()))        
     # Try the path
     if "?" in path:
         parse = path.split("?")
@@ -42,8 +55,8 @@ for msg in consumer:
                     rebuildKey += "&"
                     rebuildValue += "&"
                 if key == ikey:
-                    rebuildKey += f"{injectVal}={ivalue}"
-                    rebuildValue += f"{ikey}={injectVal}"
+                    rebuildKey += f"{escapedInjectVal}={ivalue}"
+                    rebuildValue += f"{ikey}={escapedInjectVal}"
                 else:
                     rebuildKey += f"{ikey}={ivalue}"
                     rebuildValue += f"{ikey}={ivalue}"

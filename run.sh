@@ -6,4 +6,4 @@ if [ ! -d ./mitmproxy ]; then
     rm mitmproxy-7.0.4-linux.tar.gz
 fi
 
-mitmproxy --showhost -s writer.py --listen-host 0.0.0.0 --listen-port 8080
+mitmproxy --ssl-insecure --showhost -s writer.py --listen-host 0.0.0.0 --listen-port 8080

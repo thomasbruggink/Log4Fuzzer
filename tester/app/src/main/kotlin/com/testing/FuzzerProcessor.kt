@@ -2,6 +2,7 @@ package com.testing
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.linecorp.armeria.client.ClientFactory
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpMethod
 import com.linecorp.armeria.common.HttpRequest
@@ -12,7 +13,8 @@ import mu.KLogging
 import java.util.Base64
 
 class FuzzerProcessor : DecatonProcessor<Event> {
-    private val client: WebClient = WebClient.of()
+    private val factory: ClientFactory = ClientFactory.builder().tlsNoVerify().build()
+    private val client = WebClient.builder().factory(factory).build()
     private val mapper: ObjectMapper = jacksonObjectMapper()
     private val decoder: Base64.Decoder = Base64.getDecoder()
 
@@ -44,7 +46,7 @@ class FuzzerProcessor : DecatonProcessor<Event> {
                 }
                 .exceptionally {
                     // Probably fine
-//                    logger.error(it) { "${task.Method} ${task.PrettyHost}" }
+                    logger.error { "${task.Method} ${task.PrettyHost} -> ${it.message}" }
                     completable.complete()
                     throw it
                 }
